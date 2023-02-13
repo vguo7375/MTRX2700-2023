@@ -40,25 +40,6 @@
 @ define text
 
 
-@ enable the clocks for peripherals (GPIOA, C and E)
-enable_peripheral_clocks:
-	LDR R0, =RCC  @ load the address of the RCC address boundary (for enabling the IO clock)
-	LDR R1, [R0, #AHBENR]  @ load the current value of the peripheral clock registers
-	ORR R1, 1 << GPIOA_ENABLE | 1 << GPIOC_ENABLE | 1 << GPIOE_ENABLE  @ 21st bit is enable GPIOE clock, 17 is GPIOA clock
-	STR R1, [R0, #AHBENR]  @ store the modified register back to the submodule
-	BX LR @ return
-
-
-@ initialise the discovery board I/O (just outputs: inputs are selected by default)
-initialise_discovery_board:
-	LDR R0, =GPIOE 	@ load the address of the GPIOE register into R0
-	LDR R1, =0x5555  @ load the binary value of 01 (OUTPUT) for each port in the upper two bytes
-					 @ as 0x5555 = 01010101 01010101
-	STRH R1, [R0, #MODER + 2]   @ store the new register values in the top half word representing
-								@ the MODER settings for pe8-15
-	BX LR @ return
-
-
 
 @ this is the entry function called from the c file
 assembly_function:
@@ -80,8 +61,50 @@ program_loop:
 @	LDR R0, =GPIOA	@ port for the input button
 @ 	task: read in the input button !
 
-	B program_loop
+	@ If you run the code, the LEDs will blink too fast, so fast you cannot tell they
+	@ are turning off and on. Uncomment the next line to make a delay
+
+	@ BL delay_function
+
+	B program_loop @ return to the program_loop label
 
 
+
+
+delay_function:
+	@ think about how you could make a delay such that the LEDs blink at a certain frequency
+	MOV R6, =0x03
+
+	@ we continue to subtract one from R6 while the result is not zero,
+	@ then return to where the delay_function was called
+not_finished_yet:
+	SUBS R6, 0x01
+	BNE not_finished_yet
+
+	BX LR @ return from function call
+
+
+
+
+@ enable the clocks for peripherals (GPIOA, C and E)
+enable_peripheral_clocks:
+	LDR R0, =RCC  @ load the address of the RCC address boundary (for enabling the IO clock)
+	LDR R1, [R0, #AHBENR]  @ load the current value of the peripheral clock registers
+	ORR R1, 1 << GPIOA_ENABLE | 1 << GPIOC_ENABLE | 1 << GPIOE_ENABLE  @ 21st bit is enable GPIOE clock, 17 is GPIOA clock
+	STR R1, [R0, #AHBENR]  @ store the modified register back to the submodule
+	BX LR @ return from function call
+
+
+
+
+
+@ initialise the discovery board I/O (just outputs: inputs are selected by default)
+initialise_discovery_board:
+	LDR R0, =GPIOE 	@ load the address of the GPIOE register into R0
+	LDR R1, =0x5555  @ load the binary value of 01 (OUTPUT) for each port in the upper two bytes
+					 @ as 0x5555 = 01010101 01010101
+	STRH R1, [R0, #MODER + 2]   @ store the new register values in the top half word representing
+								@ the MODER settings for pe8-15
+	BX LR @ return from function call
 
 
