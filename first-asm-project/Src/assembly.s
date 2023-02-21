@@ -54,12 +54,17 @@ assembly_function:
 
 program_loop:
 
+@ 	Look at the GPIOE offset ODR, display as hex, then as binary. Look at the manual page 239
+
 	LDR R0, =GPIOE  @ load the address of the GPIOE register into R0
 	STRB R4, [R0, #ODR + 1]   @ store this to the second byte of the ODR (bits 8-15)
 	EOR R4, #0xFF	@ toggle all of the bits in the byte (1->0 0->1)
 
-@	LDR R0, =GPIOA	@ port for the input button
+@ 	Look at the GPIOA offset IDR, display as hex, then as binary. Look at the manual page 239
+
 @ 	task: read in the input button !
+@	LDR R0, =GPIOA	@ port for the input button
+@	LDR R1, [R0, IDR]
 
 	@ If you run the code, the LEDs will blink too fast, so fast you cannot tell they
 	@ are turning off and on. Uncomment the next line to make a delay
@@ -71,9 +76,9 @@ program_loop:
 
 
 
+@ think about how you could make a delay such that the LEDs blink at a certain frequency
 delay_function:
-	@ think about how you could make a delay such that the LEDs blink at a certain frequency
-	MOV R6, =0x03
+	MOV R6, #0x03
 
 	@ we continue to subtract one from R6 while the result is not zero,
 	@ then return to where the delay_function was called
