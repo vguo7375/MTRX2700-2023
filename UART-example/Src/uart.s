@@ -24,7 +24,10 @@
 .equ UART_RE, 2	@ receive enable bit
 .equ UART_UE, 0	@ enable bit for the whole UART
 .equ UART_ORE, 3 @ Overrun flag
+.equ UART_FE, 1 @ Frame error
+
 .equ UART_ORECF, 3 @ Overrun clear flag
+.equ UART_FECF, 3 @ Frame error clear flag
 
 
 @ uart4 is on GPIOC
@@ -59,9 +62,12 @@
 
 
 .align
-incoming_buffer: .byte 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
-incoming_counter: .byte 10
+@incoming_buffer: .byte 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+incoming_buffer: .space 62
+incoming_counter: .byte 62
 
+tx_string: .asciz "abcdefgh" @ Define a string
+tx_length: .byte 8
 
 
 .text
@@ -73,23 +79,29 @@ assembly_function:
 
 @ run the functions to perform the config of the ports
 	BL initialise_power
-	BL change_clock_speed
+	@BL change_clock_speed
 	BL enable_peripheral_clocks
 	BL enable_uart4
 
 @ initialise the buffer and counter
 	LDR R6, =incoming_buffer
 	LDR R7, =incoming_counter
+	LDRB R7, [R7]
 	MOV R8, #0x00
+
+	@ uncomment the next line to enter a transmission loop
+	@B tx_loop
 
 @ continue reading forever (NOTE: eventually it will run out of memory as we don't have a big buffer
 loop_forever:
+
+	LDR R0, =UART4 @ the base address for the register to set up UART4
 	LDR R1, [R0, USART_ISR] @ load the status of the UART4
 
-	TST R1, 1 << UART_ORE  @ 'AND' the current status with the bit mask that we are interested in
+	TST R1, 1 << UART_ORE | 1 << UART_FE  @ 'AND' the current status with the bit mask that we are interested in
 						   @ NOTE, the ANDS is used so that if the result is '0' the z register flag is set
 
-	BNE clear_ORE
+	BNE clear_error
 
 	TST R1, 1 << UART_RXNE @ 'AND' the current status with the bit mask that we are interested in
 							  @ NOTE, the ANDS is used so that if the result is '0' the z register flag is set
@@ -97,8 +109,14 @@ loop_forever:
 	BEQ loop_forever @ loop back to check status again if the flag indicates there is no byte waiting
 
 	LDRB R3, [R0, USART_RDR] @ load the lowest byte (RDR bits [0:7] for an 8 bit read)
-	STR R3, [R6, R8]
+	STRB R3, [R6, R8]
 	ADD R8, #1
+
+	CMP R7, R8
+	BGT no_reset
+	MOV R8, #0
+
+no_reset:
 
 	LDR R1, [R0, USART_RQR] @ load the status of the UART4
 	ORR R1, 1 << UART_RXFRQ
@@ -108,10 +126,11 @@ loop_forever:
 
 
 
-clear_ORE:
+clear_error:
 
 	LDR R1, [R0, USART_ICR] @ load the status of the UART4
-	ORR R1, 1 << UART_ORECF	@ Clear the overrun flag (see page 897)
+	@ Clear the overrun/frame error flag (see page 897)
+	ORR R1, 1 << UART_ORECF | 1 << UART_FECF
 	STR R1, [R0, USART_ICR] @ load the status of the UART4
 	B loop_forever
 
@@ -145,8 +164,8 @@ enable_uart4:
 	STR R1, [R0, #APB1ENR] @ store the modified enable register values back to RCC
 
 	@ this is the baud rate
-	MOV R1, #0xD0 @ from our earlier calculations (for 24MHz), store this in register R1
-@	MOV R1, #0x46 @ from our earlier calculations (for 8MHz), store this in register R1
+@	MOV R1, #0xD0 @ from our earlier calculations (for 24MHz), store this in register R1
+	MOV R1, #0x46 @ from our earlier calculations (for 8MHz), store this in register R1
 	LDR R0, =UART4 @ the base address for the register to turn clocks on/off
 	STRH R1, [R0, #USART_BRR] @ store this value directly in the first half word (16 bits) of
 							  	 @ the baud rate register
@@ -166,12 +185,40 @@ enable_uart4:
 
 
 
+tx_loop:
+	LDR R3, =tx_string
+	LDR R4, =tx_length
+	LDR R4, [R4]
+
+tx_uart:
+
+	LDR R1, [R0, USART_ISR] @ load the status of the UART4
+	ANDS R1, 1 << UART_TXE @ 'AND' the current status with the bit mask that we are interested in
+							  @ NOTE, the ANDS is used so that if the result is '0' the z register flag is set
+
+	BEQ tx_uart @ loop back to check status again if the flag indicates there is no byte waiting
+
+	@MOV R5, 0x53
+	LDRB R5, [R3], #1
+
+	STRB R5, [R0, USART_TDR]
+
+	SUBS R4, #1
+	BGT tx_uart
+
+	BL delay_loop
+
+	B tx_loop
 
 
+delay_loop:
+	LDR R9, =0xfffff
 
+delay_inner:
 
-
-
+	SUBS R9, #1
+	BGT delay_inner
+	BX LR @ return from function call
 
 
 

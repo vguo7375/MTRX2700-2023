@@ -42,3 +42,4 @@
 .equ TIM_CCER, 0x20 @ control register for output/capture
 .equ TIM_CCR1, 0x34 @ capture/compare register for channel 1
 .equ TIM_SR, 0x10 @ status of the timer
+.equ TIM_DIER, 0x0C @ enable interrupts
