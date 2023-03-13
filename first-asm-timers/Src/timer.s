@@ -29,10 +29,6 @@ assembly_function:
 	@ start the counter running
 	LDR R0, =TIM2	@ load the base address for the timer
 
-	MOV R1, #0x20 @ put a prescaler in R1
-	STR R1, [R0, TIM_ARR] @ set the prescaler register
-
-
 	MOV R1, #0b1 @ store a 1 in bit zero for the CEN flag
 	STR R1, [R0, TIM_CR1] @ enable the timer
 
@@ -104,6 +100,7 @@ trigger_prescaler:
 	@ the TIMx_ARR register sets the count at which the overflow
 	@ happens. Here, the reset is triggered and the overflow
 	@ occurs to make the prescaler take effect.
+	@ you should use a different approach to this !
 
 	@ In your code, you should be using the ARR register to
 	@ set the maximum count for the timer
