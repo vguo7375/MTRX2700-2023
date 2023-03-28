@@ -29,7 +29,8 @@
 // function pointer is defined
 #define MAX_BUTTON_HANDLERS 8
 // Note, I add an extra function pointer so the array will always be null terminated
-void (*button_handlers[MAX_BUTTON_HANDLERS+1])() = {0,0,0,0,0,0,0,0,0};// = 0x00;
+// alternatively, a proper data structure could be used (like c++ standard vector)
+void (*button_handlers[MAX_BUTTON_HANDLERS+1])() = {0};
 
 void EXTI0_IRQHandler(void)
 {
