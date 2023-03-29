@@ -63,13 +63,13 @@ program_loop:
 @ 	Look at the GPIOA offset IDR, display as hex, then as binary. Look at the manual page 239
 
 @ 	task: read in the input button !
-@	LDR R0, =GPIOA	@ port for the input button
-@	LDR R1, [R0, IDR]
+	LDR R0, =GPIOA	@ port for the input button
+	LDR R1, [R0, IDR]
 
 	@ If you run the code, the LEDs will blink too fast, so fast you cannot tell they
 	@ are turning off and on. Uncomment the next line to make a delay
 
-	@ BL delay_function
+	BL delay_function
 
 	B program_loop @ return to the program_loop label
 
@@ -78,7 +78,7 @@ program_loop:
 
 @ think about how you could make a delay such that the LEDs blink at a certain frequency
 delay_function:
-	MOV R6, #0x03
+	LDR R6, =0xf00ff
 
 	@ we continue to subtract one from R6 while the result is not zero,
 	@ then return to where the delay_function was called
